@@ -1,115 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dynamic Rise™ Engine Prototype</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dynamic Rise™ — Editor</title>
 <style>
-  :root {
-    --bg:#0a0e14;
-    --panel:#0f1420;
-    --panel2:#0b101a;
-    --accent:#6cf;
-    --muted:#8aa0b6;
-    --line:#1f2a3a;
+  :root{
+    --bg:#07101a; --panel:#0b1622; --panel2:#07101a; --muted:#8aa0b6; --accent:#6cf; --line:#163043;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;height:100%;font-family:system-ui,sans-serif;color:#e6eef7;background:var(--bg);}
-  .app{display:grid;grid-template-columns:300px 1fr 320px;grid-template-rows:56px 1fr 160px;height:100%;}
-  header{grid-column:1/-1;background:linear-gradient(180deg,#12192a,#0f1522);display:flex;align-items:center;padding:8px;gap:10px;border-bottom:1px solid var(--line);}
-  .btn{background:#172238;border:1px solid #26354f;color:#e6eef7;padding:6px 12px;border-radius:8px;cursor:pointer;}
-  .spacer{flex:1;}
-  aside{overflow:auto;}
-  .left{background:var(--panel);border-right:1px solid var(--line);}
-  .right{background:var(--panel);border-left:1px solid var(--line);}
-  main{position:relative;background:radial-gradient(1200px 600px at 60% 30%,#121a2c 0%,#0a0e14 55%);}
-  #viewport{position:absolute;inset:0;outline:none;}
-  .toolbar{position:absolute;top:10px;left:10px;display:flex;gap:8px;background:rgba(16,24,39,0.6);padding:6px;border-radius:12px;}
-  .statusbar{grid-column:1/-1;background:var(--panel2);display:grid;grid-template-columns:300px 1fr 320px;border-top:1px solid var(--line);}
-  .console{padding:8px;font-family:monospace;overflow:auto;white-space:pre-wrap;}
-  .section{padding:10px;border-bottom:1px solid var(--line);}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:#e9f2fb;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  .app{height:100%;display:grid;grid-template-columns:300px 1fr 360px;grid-template-rows:56px 1fr 150px;gap:0}
+  header{grid-column:1/-1;display:flex;align-items:center;padding:8px 12px;background:linear-gradient(180deg,#061025,#081726);border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;letter-spacing:.08em;margin-right:10px}
+  .btn{background:#0f2435;border:1px solid #213a52;padding:8px 10px;border-radius:8px;color:inherit;cursor:pointer;margin-right:8px}
+  .chip{background:#0e2434;border:1px solid #19374f;padding:6px 10px;border-radius:999px}
+  .spacer{flex:1}
+  aside{overflow:auto}
+  .left{background:var(--panel);border-right:1px solid var(--line)}
+  .right{background:var(--panel);border-left:1px solid var(--line)}
+  .section{padding:10px;border-bottom:1px solid var(--line)}
+  .section h3{margin:0 0 8px 0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .hierarchy-item{padding:8px;border-radius:6px;cursor:pointer;margin-bottom:6px;background:transparent}
+  .hierarchy-item:hover{background:#071826}
+  .hierarchy-item.active{outline:1px solid #2a4f78;background:#0b2234}
+  main{position:relative;background:radial-gradient(800px 300px at 60% 20%, #0d1b2a 0%, #07101a 50%)}
+  canvas#viewport{position:absolute;inset:0;display:block;outline:none}
+  .toolbar{position:absolute;left:12px;top:12px;background:rgba(6,16,24,0.6);backdrop-filter:blur(6px);padding:8px;border-radius:10px;border:1px solid #18314a}
+  .statusbar{grid-column:1/-1;background:var(--panel2);display:grid;grid-template-columns:300px 1fr 360px;border-top:1px solid var(--line)}
+  .console{padding:8px;font-family:ui-monospace,Consolas,Menlo,monospace;white-space:pre-wrap;overflow:auto;height:150px}
+  .inspector label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .inspector input,.inspector select{width:100%;padding:8px;border-radius:8px;background:#071721;border:1px solid #1b425b;color:inherit}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tiny{font-size:12px;color:var(--muted)}
+  input[type=file]{display:none}
+  footer.small{font-size:12px;color:var(--muted);padding:8px 10px}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="brand">Dynamic Rise™ Engine</div>
-    <button class="btn" id="addCube">+ Cube</button>
-    <button class="btn" id="addPlane">+ Plane</button>
-    <button class="btn" id="addLight">+ Light</button>
+    <button id="btnAddCube" class="btn">+ Cube</button>
+    <button id="btnAddPlane" class="btn">+ Plane</button>
+    <button id="btnAddLight" class="btn">+ Light</button>
     <div class="spacer"></div>
-    <button class="btn" id="saveScene">Save</button>
+    <div class="row">
+      <button id="btnGizmoT" class="chip">Move (1)</button>
+      <button id="btnGizmoR" class="chip">Rotate (2)</button>
+      <button id="btnGizmoS" class="chip">Scale (3)</button>
+      <button id="btnSnap" class="chip">Snap</button>
+      <button id="btnCam" class="chip">Cam: Editor</button>
+      <button id="btnSave" class="chip">Save</button>
+      <label for="fileLoad" class="chip" style="cursor:pointer">Load</label>
+      <input id="fileLoad" type="file" accept="application/json" />
+      <label for="fileGLTF" class="chip" style="cursor:pointer">Import glTF</label>
+      <input id="fileGLTF" type="file" accept=".gltf,.glb,model/gltf-binary,model/gltf+json" />
+    </div>
   </header>
 
   <aside class="left">
     <div class="section">
       <h3>Hierarchy</h3>
-      <div id="hierarchy"></div>
+      <div id="hierarchy" style="padding-right:10px"></div>
+    </div>
+    <div class="section">
+      <h3>Environment</h3>
+      <div class="row" style="margin-bottom:8px">
+        <button id="btnGrid" class="btn">Grid</button>
+        <button id="btnAxes" class="btn">Axes</button>
+        <button id="btnSky" class="btn">Sky</button>
+      </div>
+      <div class="tiny">Tone</div>
+      <select id="toneMapping" style="width:100%;margin-top:6px;margin-bottom:8px">
+        <option value="1" selected>ACES</option><option value="0">None</option><option value="2">Reinhard</option><option value="3">Cineon</option><option value="4">Linear</option>
+      </select>
+      <div class="tiny">Exposure</div>
+      <input id="exposure" type="range" min="0.2" max="2.0" step="0.01" value="1.0" style="width:100%;margin-top:6px">
     </div>
   </aside>
 
   <main>
     <canvas id="viewport" tabindex="0"></canvas>
-    <div class="toolbar">WASD: Move • 1/2/3: Gizmo</div>
+    <div class="toolbar tiny">WASD: game-cam • RMB-look • F: focus • 1/2/3: gizmo • Drag & drop .glb</div>
   </main>
 
   <aside class="right">
     <div class="section">
       <h3>Inspector</h3>
-      <div id="inspector">Select an object</div>
+      <div class="inspector" id="inspector">
+        <label>Pos X <input id="posX" type="number" step="0.01" /></label>
+        <label>Pos Y <input id="posY" type="number" step="0.01" /></label>
+        <label>Pos Z <input id="posZ" type="number" step="0.01" /></label>
+        <label>Rot X <input id="rotX" type="number" step="0.1" /></label>
+        <label>Rot Y <input id="rotY" type="number" step="0.1" /></label>
+        <label>Rot Z <input id="rotZ" type="number" step="0.1" /></label>
+        <label>Scale <input id="scaleU" type="number" step="0.01" value="1" /></label>
+        <label>Color <input id="matColor" type="color" value="#6aa4ff" /></label>
+        <label>Roughness <input id="rough" type="range" min="0" max="1" step="0.01" value="0.6" /></label>
+        <label>Metalness <input id="metal" type="range" min="0" max="1" step="0.01" value="0.1" /></label>
+      </div>
     </div>
   </aside>
 
   <div class="statusbar">
-    <div class="section">Selection Info</div>
+    <div class="section" style="border-right:1px solid var(--line)">
+      <h3>Selection</h3>
+      <div id="selectionInfo" class="tiny">None</div>
+    </div>
     <div class="console" id="console"></div>
-    <div class="section">Renderer: Three.js WebGL</div>
+    <div class="section" style="border-left:1px solid var(--line)">
+      <h3>Renderer</h3>
+      <div class="tiny">Three.js • PBR • FXAA • EnvMap • Soft Shadows</div>
+    </div>
   </div>
 </div>
 
 <script type="module">
+// --- Imports (module-friendly CDN) ---
 import * as THREE from 'https://unpkg.com/three@0.161.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'https://unpkg.com/three@0.161.0/examples/jsm/controls/TransformControls.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'https://unpkg.com/three@0.161.0/examples/jsm/environments/RoomEnvironment.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.161.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.161.0/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://unpkg.com/three@0.161.0/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'https://unpkg.com/three@0.161.0/examples/jsm/shaders/FXAAShader.js';
 
-// Renderer
+// --- UI refs ---
 const canvas = document.getElementById('viewport');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth - 620, window.innerHeight - 216);
+const hierarchyEl = document.getElementById('hierarchy');
+const consoleEl = document.getElementById('console');
+const selectionInfo = document.getElementById('selectionInfo');
+const inspector = {
+  posX: document.getElementById('posX'),
+  posY: document.getElementById('posY'),
+  posZ: document.getElementById('posZ'),
+  rotX: document.getElementById('rotX'),
+  rotY: document.getElementById('rotY'),
+  rotZ: document.getElementById('rotZ'),
+  scaleU: document.getElementById('scaleU'),
+  matColor: document.getElementById('matColor'),
+  rough: document.getElementById('rough'),
+  metal: document.getElementById('metal')
+};
+const fileGLTF = document.getElementById('fileGLTF');
+const fileLoad = document.getElementById('fileLoad');
 
-// Scene + Camera
+// --- Logger ---
+function log(...args){ const s = args.map(a=> typeof a==='string' ? a : JSON.stringify(a)).join(' '); consoleEl.textContent += s + '\n'; consoleEl.scrollTop = consoleEl.scrollHeight; }
+log('Booting Dynamic Rise™ editor...');
+
+// --- Renderer & sizes ---
+function getViewportSize(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  return { w: Math.max(16, Math.floor(rect.width)), h: Math.max(16, Math.floor(rect.height)) };
+}
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+// --- Scene & cameras ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0e14);
-const camera = new THREE.PerspectiveCamera(60, (window.innerWidth-620)/(window.innerHeight-216), 0.1, 1000);
-camera.position.set(5,5,5);
-const controls = new OrbitControls(camera, renderer.domElement);
+scene.background = new THREE.Color(0x0b1320);
 
-// Helpers
-const grid = new THREE.GridHelper(40,40); scene.add(grid);
-const axes = new THREE.AxesHelper(5); scene.add(axes);
+const editorCam = new THREE.PerspectiveCamera(60,1,0.1,2000);
+editorCam.position.set(7,5,9);
+const gameCam = new THREE.PerspectiveCamera(75,1,0.1,2000);
+gameCam.position.set(0,2,5);
+let activeCam = editorCam;
 
-// Add primitives
-function addCube(){ const c = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0x6aa4ff})); scene.add(c); log('Added Cube'); }
-function addPlane(){ const p = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.MeshStandardMaterial({color:0x222a33})); p.rotation.x=-Math.PI/2; scene.add(p); log('Added Plane'); }
-function addLight(){ const l = new THREE.PointLight(0xffffff,2); l.position.set(2,4,2); scene.add(l); log('Added Light'); }
+// controls
+const orbit = new OrbitControls(editorCam, renderer.domElement);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.06;
+orbit.target.set(0,1,0);
 
-document.getElementById('addCube').onclick = addCube;
-document.getElementById('addPlane').onclick = addPlane;
-document.getElementById('addLight').onclick = addLight;
+// --- Env map (PBR vibe) ---
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+const room = new RoomEnvironment();
+const envMap = pmrem.fromScene(room, 0.04).texture;
+scene.environment = envMap;
 
-// Logger
-const logEl = document.getElementById('console');
-function log(msg){ logEl.textContent += '\n' + msg; logEl.scrollTop = logEl.scrollHeight; }
+// --- Helpers, lights, ground ---
+const grid = new THREE.GridHelper(80,80,'#18455f','#0f2230');
+grid.material.opacity = 0.45; grid.material.transparent = true;
+scene.add(grid);
 
-// Animate
-function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }
-animate();
+const axes = new THREE.AxesHelper(2);
+scene.add(axes);
 
-window.addEventListener('resize', ()=>{
-  renderer.setSize(window.innerWidth-620, window.innerHeight-216);
-  camera.aspect = (window.innerWidth-620)/(window.innerHeight-216);
-  camera.updateProjectionMatrix();
+const hemi = new THREE.HemisphereLight(0xbfeaff, 0x081b2b, 0.6);
+scene.add(hemi);
+
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(6,20,8);
+dir.castShadow = true;
+dir.shadow.mapSize.set(2048,2048);
+dir.shadow.bias = -0.0005;
+scene.add(dir);
+
+// Ground (big, visible)
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(200,200),
+  new THREE.MeshStandardMaterial({ color: 0x1c2730, roughness: 0.95, metalness: 0 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+ground.name = "Ground";
+scene.add(ground);
+
+// --- Postprocessing (FXAA) ---
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, activeCam);
+composer.addPass(renderPass);
+const fxaa = new ShaderPass(FXAAShader);
+composer.addPass(fxaa);
+function setFXAA(){ const { w,h } = getViewportSize(); fxaa.material.uniforms['resolution'].value.set(1/(w*renderer.getPixelRatio()), 1/(h*renderer.getPixelRatio())); }
+
+// --- Transform controls (gizmo) ---
+const transform = new TransformControls(activeCam, renderer.domElement);
+transform.addEventListener('dragging-changed', (e)=>{ orbit.enabled = !e.value; });
+transform.setSize(1.0);
+scene.add(transform);
+
+// --- Loader ---
+const gltfLoader = new GLTFLoader();
+
+// --- ECS-lite ---
+const Systems = [];
+function addSystem(fn){ Systems.push(fn); }
+function tick(dt){ for(let s of Systems) s(dt); }
+addSystem(dt => { scene.traverse(o => { if(o.userData.rotate) o.rotation.y += dt * 0.6; }); });
+
+// --- Selection & hierarchy ---
+let selected = null;
+function listables(o){ return o.visible && o !== grid && o !== axes && o !== transform && o !== editorCam && o !== gameCam && o !== pmrem && o !== room; }
+
+function refreshHierarchy(){
+  hierarchyEl.innerHTML = '';
+  // we want only top-level scene children (skip lights/helpers optionally)
+  scene.children.filter(listables).forEach(obj=>{
+    const el = document.createElement('div');
+    el.className = 'hierarchy-item' + (selected === obj ? ' active' : '');
+    el.textContent = obj.name || obj.type;
+    el.onclick = ()=> select(obj);
+    hierarchyEl.appendChild(el);
+  });
+}
+
+function select(obj){
+  selected = obj;
+  selectionInfo.textContent = obj ? `${obj.name || obj.type} <${obj.type}>` : 'None';
+  transform.detach();
+  if(obj && obj.isObject3D) transform.attach(obj);
+  updateInspector(obj);
+  refreshHierarchy();
+}
+
+// --- Inspector bindings & helpers ---
+function updateInspector(o){
+  if(!o){ inspector.posX.value=''; inspector.posY.value=''; inspector.posZ.value=''; inspector.rotX.value=''; inspector.rotY.value=''; inspector.rotZ.value=''; inspector.scaleU.value=1; return; }
+  inspector.posX.value = o.position.x.toFixed(2);
+  inspector.posY.value = o.position.y.toFixed(2);
+  inspector.posZ.value = o.position.z.toFixed(2);
+  inspector.rotX.value = THREE.MathUtils.radToDeg(o.rotation.x).toFixed(1);
+  inspector.rotY.value = THREE.MathUtils.radToDeg(o.rotation.y).toFixed(1);
+  inspector.rotZ.value = THREE.MathUtils.radToDeg(o.rotation.z).toFixed(1);
+  inspector.scaleU.value = o.scale.x.toFixed(2);
+  if(o.material && o.material.color){
+    inspector.matColor.value = '#' + o.material.color.getHexString();
+    inspector.rough.value = (o.material.roughness ?? 0.6);
+    inspector.metal.value = (o.material.metalness ?? 0.1);
+  }
+}
+function bindNumber(el, fn){
+  el.addEventListener('input', ()=>{ if(!selected) return; const v = parseFloat(el.value || 0); fn(selected, v); });
+}
+bindNumber(inspector.posX, (o,v)=> o.position.x = v);
+bindNumber(inspector.posY, (o,v)=> o.position.y = v);
+bindNumber(inspector.posZ, (o,v)=> o.position.z = v);
+bindNumber(inspector.rotX, (o,v)=> o.rotation.x = THREE.MathUtils.degToRad(v));
+bindNumber(inspector.rotY, (o,v)=> o.rotation.y = THREE.MathUtils.degToRad(v));
+bindNumber(inspector.rotZ, (o,v)=> o.rotation.z = THREE.MathUtils.degToRad(v));
+bindNumber(inspector.scaleU, (o,v)=> { o.scale.setScalar(Math.max(0.001, v)); });
+inspector.matColor.addEventListener('input', ()=> { if(selected?.material?.color) selected.material.color.set(inspector.matColor.value); });
+inspector.rough.addEventListener('input', ()=> { if(selected?.material) { selected.material.roughness = parseFloat(inspector.rough.value); selected.material.needsUpdate = true; }});
+inspector.metal.addEventListener('input', ()=> { if(selected?.material) { selected.material.metalness = parseFloat(inspector.metal.value); selected.material.needsUpdate = true; }});
+
+// --- Primitives ---
+function standardMat(hex = 0x6aa4ff){
+  const m = new THREE.MeshStandardMaterial({ color: hex, roughness:0.6, metalness:0.1 });
+  m.envMap = scene.environment;
+  m.envMapIntensity = 1.0;
+  return m;
+}
+function addCube(){
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), standardMat());
+  mesh.castShadow = mesh.receiveShadow = true;
+  mesh.name = `Cube_${Math.floor(Math.random()*9000)+100}`;
+  mesh.position.set((Math.random()*4)-2, 0.5, (Math.random()*4)-2);
+  scene.add(mesh);
+  refreshHierarchy();
+  select(mesh);
+  log('Added cube:', mesh.name);
+  return mesh;
+}
+function addPlane(){
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.MeshStandardMaterial({ color:0x222a30, roughness:0.95 }));
+  p.rotation.x = -Math.PI/2; p.receiveShadow = true; p.name='Platform';
+  scene.add(p); refreshHierarchy(); select(p); log('Added platform'); return p;
+}
+function addLight(){
+  const l = new THREE.PointLight(0xffffff, 1.8, 50);
+  l.position.set(2,4,2); l.castShadow = true; l.name = `Light_${Math.floor(Math.random()*900)}`;
+  const helper = new THREE.PointLightHelper(l, 0.25);
+  l.add(helper);
+  scene.add(l); refreshHierarchy(); select(l); log('Added light'); return l;
+}
+
+// --- GLTF import ---
+function importGLTFFile(file){
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  gltfLoader.load(url, gltf => {
+    const root = gltf.scene;
+    root.name = file.name.replace(/\.(gltf|glb)$/i,'');
+    root.traverse(n => {
+      if(n.isMesh){ n.castShadow = true; n.receiveShadow = true; if(n.material) { n.material.envMap = scene.environment; n.material.envMapIntensity = 1.0; } }
+    });
+    scene.add(root);
+    refreshHierarchy();
+    select(root);
+    URL.revokeObjectURL(url);
+    log('Imported', file.name);
+  }, xhr => {}, err => { log('GLTF error', err.message || err); });
+}
+
+// drag & drop
+canvas.addEventListener('dragover', e => { e.preventDefault(); });
+canvas.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files?.[0];
+  if(file) importGLTFFile(file);
 });
+
+// file input
+fileGLTF.addEventListener('change', e => { const f = e.target.files?.[0]; if(f) importGLTFFile(f); e.target.value=''; });
+
+// --- Raycast selection (editor & game cam) ---
+const ray = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown', (ev)=>{
+  if(ev.button !== 0) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((ev.clientX - rect.left)/rect.width) * 2 - 1;
+  pointer.y = -((ev.clientY - rect.top)/rect.height) * 2 + 1;
+  ray.setFromCamera(pointer, activeCam);
+  const hits = ray.intersectObjects(scene.children, true);
+  const first = hits.find(h => listables(h.object));
+  if(first){
+    let obj = first.object;
+    // climb to named parent (commonly models are nested)
+    while(obj && !obj.name && obj.parent) obj = obj.parent;
+    select(obj || first.object);
+  } else {
+    select(null);
+  }
+});
+
+// --- Camera switching (Editor <-> Game) ---
+let usingGameCam = false;
+const btnCam = document.getElementById('btnCam');
+function setActiveCamera(cam){
+  activeCam = cam;
+  renderPass.camera = cam;
+  transform.camera = cam;
+  onResize();
+  log('Active Cam:', cam === gameCam ? 'Game' : 'Editor');
+}
+btnCam.addEventListener('click', ()=> {
+  usingGameCam = !usingGameCam;
+  btnCam.textContent = 'Cam: ' + (usingGameCam ? 'Game' : 'Editor');
+  setActiveCamera(usingGameCam ? gameCam : editorCam);
+});
+
+// --- Game cam movement ---
+const keys = new Set();
+let speed = 5;
+window.addEventListener('keydown', e => { if(e.key === 'Shift') speed = 12; keys.add(e.code); if(e.code === 'KeyF' && selected) { orbit.target.copy(selected.position); }});
+window.addEventListener('keyup', e => { if(e.key === 'Shift') speed = 5; keys.delete(e.code); });
+
+function updateGameCam(dt){
+  if(!usingGameCam) return;
+  const move = new THREE.Vector3();
+  const forward = new THREE.Vector3(); gameCam.getWorldDirection(forward);
+  const right = new THREE.Vector3().crossVectors(forward, gameCam.up).normalize();
+  if(keys.has('KeyW')) move.add(forward);
+  if(keys.has('KeyS')) move.addScaledVector(forward, -1);
+  if(keys.has('KeyA')) move.addScaledVector(right, -1);
+  if(keys.has('KeyD')) move.add(right);
+  if(keys.has('KeyQ')) move.addScaledVector(new THREE.Vector3(0,1,0), -1);
+  if(keys.has('KeyE')) move.add(new THREE.Vector3(0,1,0));
+  if(move.lengthSq() > 0){ move.normalize(); gameCam.position.addScaledVector(move, speed * dt); }
+}
+
+// --- Mouse look for game cam (RMB) ---
+let rmb = false, lastX = 0, lastY = 0;
+canvas.addEventListener('pointerdown', e => { if(e.button === 2){ rmb = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId);} });
+canvas.addEventListener('pointerup', e => { if(e.button === 2){ rmb = false; canvas.releasePointerCapture(e.pointerId);} });
+canvas.addEventListener('pointermove', e => {
+  if(!rmb || !usingGameCam) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  const rot = new THREE.Euler(dy * -0.002, dx * -0.002, 0, 'YXZ');
+  const q = new THREE.Quaternion().setFromEuler(rot);
+  gameCam.quaternion.multiply(q);
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// --- Gizmo & shortcuts ---
+document.getElementById('btnGizmoT').addEventListener('click', ()=> transform.setMode('translate'));
+document.getElementById('btnGizmoR').addEventListener('click', ()=> transform.setMode('rotate'));
+document.getElementById('btnGizmoS').addEventListener('click', ()=> transform.setMode('scale'));
+document.getElementById('btnSnap').addEventListener('click', ()=> transform.setTranslationSnap(transform.getTranslationSnap()? null : 0.5));
+window.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT') return;
+  if(e.code === 'Digit1') transform.setMode('translate');
+  if(e.code === 'Digit2') transform.setMode('rotate');
+  if(e.code === 'Digit3') transform.setMode('scale');
+  if(e.shiftKey) transform.setTranslationSnap(0.5); else transform.setTranslationSnap(null);
+});
+
+// --- UI wiring for buttons ---
+document.getElementById('btnAddCube').onclick = addCube;
+document.getElementById('btnAddPlane').onclick = addPlane;
+document.getElementById('btnAddLight').onclick = addLight;
+document.getElementById('btnSave').onclick = ()=> {
+  const json = JSON.stringify(scene.toJSON());
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type:'application/json' })); a.download = 'scene.json'; a.click();
+};
+fileLoad.addEventListener('change', e => { const f = e.target.files?.[0]; if(!f) return; const r = new FileReader(); r.onload = ()=> { loadFromJSON(r.result); }; r.readAsText(f); e.target.value=''; });
+
+// load JSON scene
+function loadFromJSON(json){
+  try{
+    const loader = new THREE.ObjectLoader();
+    const data = JSON.parse(json);
+    // remove non-essential children (keep lights/ground/helpers)
+    scene.children.slice().forEach(ch => { if(ch !== grid && ch !== axes && ch !== transform && ch !== hemi && ch !== dir && ch !== ground) scene.remove(ch); });
+    const parsed = loader.parse(data);
+    parsed.children.forEach(c => { if(c.type !== 'Scene') scene.add(c); });
+    refreshHierarchy(); select(null); log('Scene loaded from JSON');
+  }catch(e){ log('failed load', e.message); }
+}
+
+// --- Resize handler ---
+function onResize(){
+  const { w,h } = getViewportSize();
+  renderer.setSize(w, h, false);
+  editorCam.aspect = w / h; editorCam.updateProjectionMatrix();
+  gameCam.aspect = w / h; gameCam.updateProjectionMatrix();
+  // composer uses a separate size
+  composer.setSize(w, h);
+  setFXAA();
+}
+window.addEventListener('resize', onResize);
+
+// --- Frame loop ---
+let last = performance.now();
+function animate(t){
+  const dt = (t - last) / 1000; last = t;
+  orbit.enabled = !usingGameCam && !transform.dragging;
+  orbit.update();
+  updateGameCam(dt);
+  tick(dt);
+  // keep renderPass and transform camera in sync each frame
+  renderPass.camera = activeCam;
+  transform.camera = activeCam;
+  composer.render();
+  requestAnimationFrame(animate);
+}
+onResize();
+requestAnimationFrame(animate);
+
+// --- Boot content (visible objects so editor isn't blank) ---
+addPlane();
+const demoCube = addCube();
+demoCube.userData.rotate = false;
+demoCube.position.set(0,1,0);
+refreshHierarchy();
+select(demoCube);
+log('Ready — drag & drop a .glb file onto the viewport to import.');
+
+// expose small API for devtools
+window.DRGE = { THREE, scene, editorCam, gameCam, renderer, addCube, addPlane, addLight, importGLTFFile, select, refreshHierarchy };
+
 </script>
 </body>
 </html>
